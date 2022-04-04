@@ -13,6 +13,7 @@ from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class WebDriver:
@@ -29,11 +30,13 @@ class WebDriver:
         chrome_options = webdriver.ChromeOptions()
 
         if self.download_dir is not None:
-            prefs = {"download.default_directory": os.path.abspath(self.download_dir)}
+            prefs = {"download.default_directory": os.path.abspath(
+                self.download_dir)}
             chrome_options.add_experimental_option("prefs", prefs)
 
         chrome_options.add_argument('--disable-infobars')
         chrome_options.add_argument('--start-maximized')
+        chrome_options.add_argument('--log-level=3')
 
         if self.proxy:
             print("add proxy")
@@ -42,27 +45,22 @@ class WebDriver:
         chrome_options.add_experimental_option("excludeSwitches",
                                                [
                                                    # "ignore-certificate-errors",
-                                                       "safebrowsing-disable-download-protection",
+                                                   "safebrowsing-disable-download-protection",
                                                    "safebrowsing-disable-auto-update",
                                                    # "disable-client-side-phishing-detection"
                                                ]
                                                )
 
         chrome_options.add_argument("--incognito")
-        print("Chrome path: {}".format(self.exe_path))
+        # print("Chrome path: {}".format(self.exe_path))
         try:
+            # run by chromeDriverManager
+            return webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+        except:
+            # run by local chromedriver
             return webdriver.Chrome(
                 executable_path=self.exe_path,
                 options=chrome_options)
-        except:
-            try:
-                return webdriver.Chrome(
-                    executable_path=os.path.join('report', 'web_utils', 'chromedriver.exe'),
-                    options=chrome_options)
-            except:
-                return webdriver.Chrome(
-                    executable_path=os.path.join(os.getcwd(), 'chromedriver.exe'),
-                    options=chrome_options)
 
     def check_download(self):
         sleep(2)
@@ -75,7 +73,7 @@ class WebDriver:
             if count <= self.dl_timeout:
                 count += 1
                 downloading_files = glob(os.path.join(self.download_dir, "*crdownload*")) + glob(
-            os.path.join(self.download_dir, "*.tmp*"))
+                    os.path.join(self.download_dir, "*.tmp*"))
             else:
                 with open(os.path.join(os.getcwd(), 'download_error_log.log')) as writer:
                     writer.write(
@@ -122,3 +120,36 @@ class WebDriver:
     def restart(self):
         self.driver.quit()
         self.driver = self.get_chrome()
+
+    def highlight_by_xpath(self, xpath: str):
+        """Highlights (blinks) a Selenium Webdriver element"""
+
+        element = WebDriverWait(self.driver, self.browser_timeout).until(
+            EC.visibility_of_element_located((By.XPATH, xpath)))
+
+        browser = element._parent
+
+        def appy_style(s):
+            browser.execute_script(
+                "arguments[0].setAttribute('style', arguments[1]);", element, s)
+
+        original_style = element.get_attribute('style')
+        appy_style("background: yellow; border: 2px solid red;")
+        sleep(1)
+        appy_style(original_style)
+        sleep(0.3)
+
+    def highlight_element(self, element):
+        """Highlights (blinks) a Selenium Webdriver element"""
+
+        browser = element._parent
+
+        def appy_style(s):
+            browser.execute_script(
+                "arguments[0].setAttribute('style', arguments[1]);", element, s)
+
+        original_style = element.get_attribute('style')
+        appy_style("background: yellow; border: 2px solid red;")
+        sleep(1)
+        appy_style(original_style)
+        sleep(0.3)
